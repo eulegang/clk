@@ -13,7 +13,7 @@ pub enum Cmd {
     Proj(proj::Proj),
     On(On),
     Off(Off),
-    Cur(Cur),
+    Status(Status),
     Report(Report),
 }
 
@@ -23,7 +23,7 @@ pub struct Off {}
 
 /// Checks the current work entry
 #[derive(Parser)]
-pub struct Cur {}
+pub struct Status {}
 
 /// Starts a work entry
 #[derive(Parser)]
@@ -45,7 +45,7 @@ impl Runner for Cmd {
             Cmd::Proj(proj) => proj.run(db).await,
             Cmd::On(on) => on.run(db).await,
             Cmd::Off(off) => off.run(db).await,
-            Cmd::Cur(cur) => cur.run(db).await,
+            Cmd::Status(cur) => cur.run(db).await,
             Cmd::Report(report) => report.run(db).await,
         }
     }
@@ -103,7 +103,7 @@ impl Runner for Off {
     }
 }
 
-impl Runner for Cur {
+impl Runner for Status {
     async fn run(self, db: &mut sqlx::sqlite::SqliteConnection) -> eyre::Result<()> {
         let row = query!(r#"select name, unixepoch() now, start from Entries inner join Projects on Entries.project_id = Projects.id where end is null"#).fetch_optional(db).await?;
 
