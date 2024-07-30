@@ -6,5 +6,6 @@ edition = "2021"
 [dependencies]
 clap = { version = "4.5.9", features = ["derive", "env"] }
 dirs = "5.0.1"
-sqlx = { version = "0.7.4", features = ["sqlx-sqlite", "chrono", "runtime-tokio"] }
+eyre = "0.6.12"
+sqlx = { version = "0.7.4", features = ["sqlx-sqlite", "chrono", "runtime-tokio", "sqlite"] }
 tokio = { version = "1.38.1", features = ["full"] }
