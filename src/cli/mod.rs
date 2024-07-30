@@ -48,9 +48,16 @@ impl Runner for On {
             std::process::exit(1);
         }
 
-        query!(r#"insert into Entries (project_id, start) select id project_id, unixepoch() start from Projects "#).execute(lock.as_mut()).await?;
+        let res = query!(r#"insert into Entries (project_id, start) select id project_id, unixepoch() start from Projects where name = ?"#, self.project).execute(lock.as_mut()).await?;
 
-        lock.commit().await?;
+        if dbg!(res.rows_affected()) != 1 {
+            lock.rollback().await?;
+
+            eprintln!("failed to create record");
+            std::process::exit(1);
+        } else {
+            lock.commit().await?;
+        }
 
         Ok(())
     }
