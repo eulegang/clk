@@ -1,5 +1,6 @@
 use clap::Parser;
-use sqlx::{query, Acquire};
+use eyre::{Context as _, ContextCompat as _};
+use sqlx::{query, Acquire, Column, Row, Value, ValueRef};
 
 use crate::Runner;
 
@@ -12,6 +13,7 @@ pub enum Cmd {
     On(On),
     Off(Off),
     Cur(Cur),
+    Report(Report),
 }
 
 #[derive(Parser)]
@@ -25,6 +27,13 @@ pub struct On {
     project: String,
 }
 
+#[derive(Parser)]
+pub struct Report {
+    report: String,
+
+    args: Vec<String>,
+}
+
 impl Runner for Cmd {
     async fn run(self, db: &mut sqlx::sqlite::SqliteConnection) -> eyre::Result<()> {
         match self {
@@ -32,6 +41,7 @@ impl Runner for Cmd {
             Cmd::On(on) => on.run(db).await,
             Cmd::Off(off) => off.run(db).await,
             Cmd::Cur(cur) => cur.run(db).await,
+            Cmd::Report(report) => report.run(db).await,
         }
     }
 }
@@ -97,6 +107,63 @@ impl Runner for Cur {
             println!("{} {}", row.name, dur);
         } else {
             println!("off the clock");
+        }
+
+        Ok(())
+    }
+}
+
+impl Runner for Report {
+    async fn run(self, db: &mut sqlx::sqlite::SqliteConnection) -> eyre::Result<()> {
+        let mut s = dirs::config_dir().wrap_err("expected to find config dir")?;
+        s.push("clk");
+        s.push("reports");
+
+        s.push(&format!("{}.sql", self.report));
+
+        let sql = std::fs::read_to_string(&s).wrap_err("no report exists")?;
+
+        let mut q = sqlx::query(&sql);
+
+        for arg in self.args {
+            q = q.bind(arg);
+        }
+
+        let results = q.fetch_all(db).await?;
+
+        let stdout = std::io::stdout();
+        let mut writer = csv::Writer::from_writer(stdout.lock());
+
+        if let Some(row) = results.first() {
+            for col in row.columns() {
+                writer.write_field(col.name())?;
+            }
+
+            writer.write_record(None::<&[u8]>)?;
+        }
+
+        for row in results {
+            for i in 0..row.len() {
+                let val = row.try_get_raw(i)?.to_owned();
+
+                if val.is_null() {
+                    writer.write_field("null")?;
+                } else if let Ok(i) = val.try_decode::<i64>() {
+                    writer.write_field(i.to_string())?;
+                } else if let Ok(b) = val.try_decode::<bool>() {
+                    writer.write_field(b.to_string())?;
+                } else if let Ok(s) = val.try_decode::<String>() {
+                    writer.write_field(s)?;
+                } else if let Ok(b) = val.try_decode::<Vec<u8>>() {
+                    writer.write_field(b)?;
+                } else if let Ok(f) = val.try_decode::<f64>() {
+                    writer.write_field(f.to_string())?;
+                } else {
+                    eprintln!("failed to decode");
+                }
+            }
+
+            writer.write_record(None::<&[u8]>)?;
         }
 
         Ok(())
