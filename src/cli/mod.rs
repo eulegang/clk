@@ -6,6 +6,7 @@ use crate::Runner;
 
 mod proj;
 
+/// Time tracking cli app
 #[derive(Parser)]
 pub enum Cmd {
     #[clap(subcommand)]
@@ -16,17 +17,21 @@ pub enum Cmd {
     Report(Report),
 }
 
+/// Stops the current work entry
 #[derive(Parser)]
 pub struct Off {}
 
+/// Checks the current work entry
 #[derive(Parser)]
 pub struct Cur {}
 
+/// Starts a work entry
 #[derive(Parser)]
 pub struct On {
     project: String,
 }
 
+/// Runs a report
 #[derive(Parser)]
 pub struct Report {
     report: String,

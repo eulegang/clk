@@ -3,6 +3,7 @@ use sqlx::prelude::*;
 
 use crate::Runner;
 
+/// Manage projects
 #[derive(Subcommand)]
 pub enum Proj {
     Create(ProjCreate),
@@ -10,16 +11,21 @@ pub enum Proj {
     Remove(ProjRemove),
 }
 
+/// Create a project
 #[derive(Parser)]
 pub struct ProjCreate {
+    /// The project name
     name: String,
 }
 
+/// Lists the projects
 #[derive(Parser)]
 pub struct ProjList {}
 
+/// Removes a project
 #[derive(Parser)]
 pub struct ProjRemove {
+    /// The project name
     name: String,
 }
 
