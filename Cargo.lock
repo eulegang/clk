@@ -256,6 +256,7 @@ dependencies = [
  "csv",
  "dirs",
  "eyre",
+ "libsqlite3-sys",
  "sqlx",
  "tokio",
 ]

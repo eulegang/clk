@@ -5,6 +5,7 @@ use crate::cli::Cmd;
 use sqlx::ConnectOptions;
 
 mod cli;
+mod sqlite;
 
 trait Runner {
     async fn run(self, db: &mut sqlx::sqlite::SqliteConnection) -> eyre::Result<()>;
@@ -27,6 +28,11 @@ async fn main() -> eyre::Result<()> {
         .create_if_missing(true)
         .connect()
         .await?;
+
+    {
+        let mut lock = db.lock_handle().await?;
+        sqlite::load_funcs(lock.as_raw_handle());
+    };
 
     sqlx::migrate!().run(&mut db).await?;
 
