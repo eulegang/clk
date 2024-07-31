@@ -6,25 +6,25 @@ use crate::Runner;
 /// Manage projects
 #[derive(Subcommand)]
 pub enum Proj {
-    Create(ProjCreate),
-    List(ProjList),
-    Remove(ProjRemove),
+    Add(ProjAdd),
+    Ls(ProjLs),
+    Rm(ProjRm),
 }
 
 /// Create a project
 #[derive(Parser)]
-pub struct ProjCreate {
+pub struct ProjAdd {
     /// The project name
     name: String,
 }
 
 /// Lists the projects
 #[derive(Parser)]
-pub struct ProjList {}
+pub struct ProjLs {}
 
 /// Removes a project
 #[derive(Parser)]
-pub struct ProjRemove {
+pub struct ProjRm {
     /// The project name
     name: String,
 }
@@ -32,9 +32,9 @@ pub struct ProjRemove {
 impl Runner for Proj {
     async fn run(self, db: &mut sqlx::sqlite::SqliteConnection) -> eyre::Result<()> {
         match self {
-            Proj::Create(create) => create.run(db).await,
-            Proj::List(list) => list.run(db).await,
-            Proj::Remove(remove) => remove.run(db).await,
+            Proj::Add(add) => add.run(db).await,
+            Proj::Ls(ls) => ls.run(db).await,
+            Proj::Rm(rm) => rm.run(db).await,
         }
     }
 }
@@ -44,7 +44,7 @@ struct Project {
     name: String,
 }
 
-impl Runner for ProjList {
+impl Runner for ProjLs {
     async fn run(self, db: &mut sqlx::sqlite::SqliteConnection) -> eyre::Result<()> {
         let projs = sqlx::query_as!(Project, "select name from Projects")
             .fetch_all(db)
@@ -58,7 +58,7 @@ impl Runner for ProjList {
     }
 }
 
-impl Runner for ProjCreate {
+impl Runner for ProjAdd {
     async fn run(self, db: &mut sqlx::sqlite::SqliteConnection) -> eyre::Result<()> {
         sqlx::query!(r#"insert into Projects(name) values (?)"#, self.name)
             .execute(db)
@@ -68,7 +68,7 @@ impl Runner for ProjCreate {
     }
 }
 
-impl Runner for ProjRemove {
+impl Runner for ProjRm {
     async fn run(self, db: &mut sqlx::sqlite::SqliteConnection) -> eyre::Result<()> {
         sqlx::query!(r#"delete from  Projects where name = ?"#, self.name)
             .execute(db)
