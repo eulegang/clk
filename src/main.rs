@@ -1,3 +1,6 @@
+#![deny(clippy::dbg_macro)]
+#![deny(clippy::todo)]
+
 use clap::Parser;
 use eyre::ContextCompat as _;
 

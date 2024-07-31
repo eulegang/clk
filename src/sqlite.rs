@@ -66,7 +66,7 @@ pub fn load_funcs(sql: NonNull<sqlite3>) {
 }
 
 unsafe fn is_duration(value: *mut sqlite3_value) -> bool {
-    return sqlite3_value_type(value) == SQLITE_INTEGER;
+    sqlite3_value_type(value) == SQLITE_INTEGER
 }
 
 unsafe extern "C" fn minutes(
