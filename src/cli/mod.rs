@@ -1,6 +1,6 @@
 use clap::Parser;
 use eyre::{Context as _, ContextCompat as _};
-use sqlx::{query, Acquire, Column, Row, Value, ValueRef};
+use sqlx::{query, query_as, Acquire, Column, FromRow, Row, Value, ValueRef};
 
 use crate::Runner;
 
@@ -54,16 +54,22 @@ impl Runner for Cmd {
 impl Runner for On {
     async fn run(self, db: &mut sqlx::sqlite::SqliteConnection) -> eyre::Result<()> {
         let mut lock = db.begin().await?;
-        let count = query!(r#"select count(*) as cnt from Entries where end is null"#)
-            .fetch_one(lock.as_mut())
-            .await?;
+        let count: EntryValidation =
+            query_as(r#"select count(*) as cnt from Entries where end is null"#)
+                .fetch_one(lock.as_mut())
+                .await?;
 
         if count.cnt > 0 {
             eprintln!("Currently on the clock");
             std::process::exit(1);
         }
 
-        let res = query!(r#"insert into Entries (project_id, start) select id project_id, unixepoch() start from Projects where name = ?"#, self.project).execute(lock.as_mut()).await?;
+        let res = query(
+            r#"insert into Entries (project_id, start) select id project_id, unixepoch() start from Projects where name = ?"#
+        )
+            .bind(self.project)
+            .execute(lock.as_mut())
+            .await?;
 
         if res.rows_affected() != 1 {
             lock.rollback().await?;
@@ -81,9 +87,10 @@ impl Runner for On {
 impl Runner for Off {
     async fn run(self, db: &mut sqlx::sqlite::SqliteConnection) -> eyre::Result<()> {
         let mut lock = db.begin().await?;
-        let count = query!(r#"select count(*) as cnt from Entries where end is null"#)
-            .fetch_one(lock.as_mut())
-            .await?;
+        let count: EntryValidation =
+            query_as(r#"select count(*) as cnt from Entries where end is null"#)
+                .fetch_one(lock.as_mut())
+                .await?;
 
         if count.cnt == 0 {
             eprintln!("Currently off the clock");
@@ -93,7 +100,7 @@ impl Runner for Off {
             std::process::exit(1);
         }
 
-        query!(r#"update Entries set end = unixepoch() where end is null"#)
+        query(r#"update Entries set end = unixepoch() where end is null"#)
             .execute(lock.as_mut())
             .await?;
 
@@ -105,7 +112,7 @@ impl Runner for Off {
 
 impl Runner for Status {
     async fn run(self, db: &mut sqlx::sqlite::SqliteConnection) -> eyre::Result<()> {
-        let row = query!(r#"select name, unixepoch() now, start from Entries inner join Projects on Entries.project_id = Projects.id where end is null"#).fetch_optional(db).await?;
+        let row: Option<StatusRow> = query_as(r#"select name, unixepoch() now, start from Entries inner join Projects on Entries.project_id = Projects.id where end is null"#).fetch_optional(db).await?;
 
         if let Some(row) = row {
             let dur = calc(row.now, row.start);
@@ -201,4 +208,16 @@ fn calc(now: i64, start: i64) -> String {
     let days = dur;
 
     format!("{}d {}h {}m {}s", days, hours, minutes, seconds)
+}
+
+#[derive(FromRow)]
+pub struct EntryValidation {
+    cnt: i64,
+}
+
+#[derive(FromRow)]
+pub struct StatusRow {
+    name: String,
+    now: i64,
+    start: i64,
 }

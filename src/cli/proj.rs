@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use sqlx::prelude::*;
+use sqlx::{prelude::*, query, query_as};
 
 use crate::Runner;
 
@@ -46,9 +46,7 @@ struct Project {
 
 impl Runner for ProjLs {
     async fn run(self, db: &mut sqlx::sqlite::SqliteConnection) -> eyre::Result<()> {
-        let projs = sqlx::query_as!(Project, "select name from Projects")
-            .fetch_all(db)
-            .await?;
+        let projs: Vec<Project> = query_as("select name from Projects").fetch_all(db).await?;
 
         for proj in projs {
             println!("{}", proj.name);
@@ -60,7 +58,8 @@ impl Runner for ProjLs {
 
 impl Runner for ProjAdd {
     async fn run(self, db: &mut sqlx::sqlite::SqliteConnection) -> eyre::Result<()> {
-        sqlx::query!(r#"insert into Projects(name) values (?)"#, self.name)
+        query(r#"insert into Projects(name) values (?)"#)
+            .bind(self.name)
             .execute(db)
             .await?;
 
@@ -70,7 +69,8 @@ impl Runner for ProjAdd {
 
 impl Runner for ProjRm {
     async fn run(self, db: &mut sqlx::sqlite::SqliteConnection) -> eyre::Result<()> {
-        sqlx::query!(r#"delete from  Projects where name = ?"#, self.name)
+        query(r#"delete from  Projects where name = ?"#)
+            .bind(self.name)
             .execute(db)
             .await?;
 
