@@ -39,6 +39,18 @@ async fn main() -> eyre::Result<()> {
 
     sqlx::migrate!().run(&mut db).await?;
 
+    {
+        let mut exts = dirs::config_dir().wrap_err("expected to find config dir")?;
+        exts.push("clk");
+        exts.push("ext.sql");
+
+        if exts.exists() {
+            let content = std::fs::read_to_string(&exts)?;
+
+            sqlx::raw_sql(&content).execute(&mut db).await?;
+        }
+    }
+
     args.run(&mut db).await?;
 
     Ok(())
