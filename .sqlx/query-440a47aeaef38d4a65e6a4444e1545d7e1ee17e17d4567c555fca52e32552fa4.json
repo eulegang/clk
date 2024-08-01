@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "select name, unixepoch() now, start from Entries inner join Projects on Entries.project_id = Projects.id where end is null",
+  "describe": {
+    "columns": [
+      {
+        "name": "name",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "now",
+        "ordinal": 1,
+        "type_info": "Int64"
+      },
+      {
+        "name": "start",
+        "ordinal": 2,
+        "type_info": "Int64"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "440a47aeaef38d4a65e6a4444e1545d7e1ee17e17d4567c555fca52e32552fa4"
+}

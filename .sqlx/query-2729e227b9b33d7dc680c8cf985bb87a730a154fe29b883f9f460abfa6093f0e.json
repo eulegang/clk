@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "update Entries set end = unixepoch() where end is null",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "2729e227b9b33d7dc680c8cf985bb87a730a154fe29b883f9f460abfa6093f0e"
+}

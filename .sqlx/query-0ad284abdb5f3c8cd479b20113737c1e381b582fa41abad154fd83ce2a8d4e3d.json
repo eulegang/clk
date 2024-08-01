@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "insert into Entries (project_id, start) select id project_id, unixepoch() start from Projects where name = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "0ad284abdb5f3c8cd479b20113737c1e381b582fa41abad154fd83ce2a8d4e3d"
+}
