@@ -3,7 +3,9 @@ use eyre::{Context as _, ContextCompat as _};
 use sqlx::{query, query_as, Acquire, Column, FromRow, Row, Value, ValueRef};
 
 use crate::Runner;
+use args::*;
 
+mod args;
 mod proj;
 
 /// Time tracking cli app
@@ -15,6 +17,7 @@ pub enum Cmd {
     Off(Off),
     Status(Status),
     Report(Report),
+    Enter(Enter),
 }
 
 /// Stops the current work entry
@@ -39,6 +42,16 @@ pub struct Report {
     args: Vec<String>,
 }
 
+/// Enter Time
+#[derive(Parser)]
+pub struct Enter {
+    project: String,
+
+    start: Timestamp,
+
+    duration: Duration,
+}
+
 impl Runner for Cmd {
     async fn run(self, db: &mut sqlx::sqlite::SqliteConnection) -> eyre::Result<()> {
         match self {
@@ -47,6 +60,7 @@ impl Runner for Cmd {
             Cmd::Off(off) => off.run(db).await,
             Cmd::Status(cur) => cur.run(db).await,
             Cmd::Report(report) => report.run(db).await,
+            Cmd::Enter(enter) => enter.run(db).await,
         }
     }
 }
@@ -176,6 +190,35 @@ impl Runner for Report {
             }
 
             writer.write_record(None::<&[u8]>)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl Runner for Enter {
+    async fn run(self, db: &mut sqlx::sqlite::SqliteConnection) -> eyre::Result<()> {
+        let mut lock = db.begin().await?;
+
+        let start: chrono::DateTime<chrono::Local> = self.start.into();
+        let end: chrono::DateTime<chrono::Local> = start + chrono::Duration::from(self.duration);
+
+        let res = query(
+            r#"insert into Entries (project_id, start, end) select id project_id, ? start, ? end from Projects where name = ?"#
+        )
+            .bind(start.timestamp())
+            .bind(end.timestamp())
+            .bind(self.project)
+            .execute(lock.as_mut())
+            .await?;
+
+        if res.rows_affected() != 1 {
+            lock.rollback().await?;
+
+            eprintln!("failed to create record");
+            std::process::exit(1);
+        } else {
+            lock.commit().await?;
         }
 
         Ok(())
